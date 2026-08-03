@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#07111f">
+<title>6-DOF Flight Sandbox</title>
+<style>
+:root{color-scheme:dark;--bg:#07111f;--panel:#0d1c2d;--panel2:#13283e;--text:#eef7ff;--muted:#9fb3c8;--accent:#65d8ff;--gold:#ffd36a;--line:#294963}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:radial-gradient(circle at 20% 0,#153b63,var(--bg) 48%);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}button,input{font:inherit}#app{min-height:100vh;display:grid;grid-template-columns:minmax(0,1fr) 360px}#worldWrap{position:relative;min-width:0;height:100vh;overflow:hidden}canvas{display:block;width:100%;height:100%;touch-action:none;background:#0a1b2b}.hud{position:absolute;top:max(12px,env(safe-area-inset-top));left:12px;right:12px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;pointer-events:none}.card{padding:8px 10px;border:1px solid #65d8ff33;border-radius:11px;background:#04101dcc;backdrop-filter:blur(8px)}.label{font-size:10px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}.value{font-size:18px;font-weight:800;font-variant-numeric:tabular-nums}.banner{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);padding:8px 12px;border-radius:999px;background:#04101ddd;border:1px solid #ffffff22;color:var(--gold);font-size:12px;white-space:nowrap;pointer-events:none}aside{height:100vh;overflow:auto;padding:16px;background:#071321f2;border-left:1px solid #ffffff13;padding-bottom:max(18px,env(safe-area-inset-bottom))}h1{font-size:20px;margin:0 0 4px}.sub{font-size:12px;line-height:1.45;color:var(--muted);margin-bottom:12px}.section{padding:13px;border:1px solid #ffffff13;border-radius:14px;background:#0d1c2df0;margin-bottom:11px;box-shadow:0 10px 30px #0003}.section h2{font-size:12px;letter-spacing:.08em;text-transform:uppercase;margin:0 0 10px;color:#d7ebff}.control{margin:11px 0 15px}.row{display:flex;justify-content:space-between;align-items:center;gap:12px}.row label{font-size:13px}.row output{font-size:12px;color:var(--accent);font-variant-numeric:tabular-nums}input[type=range]{width:100%;margin-top:8px;accent-color:var(--accent);height:24px}.buttons{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}button{border:1px solid #ffffff18;border-radius:10px;background:linear-gradient(#244c71,#173653);color:var(--text);font-weight:750;padding:11px 10px;cursor:pointer}button.secondary{background:#122840}button.active{outline:2px solid var(--accent);outline-offset:1px}.switchRow{display:flex;justify-content:space-between;align-items:center;color:var(--muted);font-size:12px;margin-top:11px}.switch{position:relative;width:44px;height:24px}.switch input{opacity:0;width:0;height:0}.switch span{position:absolute;inset:0;background:#294056;border-radius:99px}.switch span:before{content:"";position:absolute;width:18px;height:18px;left:3px;top:3px;border-radius:50%;background:white;transition:.15s}.switch input:checked+span{background:#16799f}.switch input:checked+span:before{transform:translateX(20px)}.telemetry{display:grid;grid-template-columns:1fr 1fr;gap:7px}.telemetry div{background:var(--panel2);border-radius:9px;padding:8px;font-size:11px}.telemetry span{display:block;color:var(--muted);margin-bottom:3px}.telemetry strong{font-size:12px;font-variant-numeric:tabular-nums}.note{font-size:11px;color:var(--muted);line-height:1.45}.touchGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.touchGrid button{padding:12px 6px;user-select:none;-webkit-user-select:none;touch-action:none}.touchGrid .blank{visibility:hidden}
+@media(max-width:900px){#app{display:block}#worldWrap{height:56vh;min-height:390px}aside{height:auto;overflow:visible;border-left:0;border-top:1px solid #ffffff13}.hud{grid-template-columns:repeat(2,minmax(0,1fr))}.value{font-size:16px}.banner{bottom:10px;max-width:calc(100% - 24px);overflow:hidden;text-overflow:ellipsis}}
+</style>
+</head>
+<body>
+<div id="app">
+<section id="worldWrap">
+<canvas id="world"></canvas>
+<div class="hud">
+<div class="card"><div class="label">Velocity</div><div class="value" id="hudSpeed">100 m/s</div></div>
+<div class="card"><div class="label">Altitude</div><div class="value" id="hudAlt">500 m</div></div>
+<div class="card"><div class="label">Range</div><div class="value" id="hudRange">0.0 km</div></div>
+<div class="card"><div class="label">Attitude</div><div class="value" id="hudAtt">0° / 0°</div></div>
+</div>
+<div class="banner" id="banner">Paused — choose commands, then start</div>
+</section>
+<aside>
+<h1>6-DOF Flight Sandbox</h1>
+<div class="sub">A deliberately abstract, non-weaponized rigid-body flight model. Adjust speed, altitude, and range; use autopilot or touch trim.</div>
+<div class="section">
+<h2>Mission commands</h2>
+<div class="control"><div class="row"><label for="speedCmd">Velocity command</label><output id="speedOut"></output></div><input id="speedCmd" type="range" min="60" max="320" step="5" value="180"></div>
+<div class="control"><div class="row"><label for="altCmd">Altitude command</label><output id="altOut"></output></div><input id="altCmd" type="range" min="100" max="6000" step="100" value="1500"></div>
+<div class="control"><div class="row"><label for="rangeCmd">Range command</label><output id="rangeOut"></output></div><input id="rangeCmd" type="range" min="2" max="100" step="1" value="25"></div>
+<div class="buttons"><button id="startBtn">Start</button><button id="pauseBtn" class="secondary">Pause</button><button id="resetBtn" class="secondary">Reset</button><button id="timeBtn" class="secondary">Time 1×</button></div>
+<div class="switchRow"><span>Velocity + altitude hold</span><label class="switch"><input id="auto" type="checkbox" checked><span></span></label></div>
+</div>
+<div class="section">
+<h2>Camera</h2>
+<div class="buttons"><button class="cam active" data-cam="chase">Chase</button><button class="cam secondary" data-cam="wide">Wide</button><button class="cam secondary" data-cam="top">Top</button><button id="trailBtn" class="secondary active">Trail on</button></div>
+</div>
+<div class="section">
+<h2>Touch trim</h2>
+<div class="touchGrid">
+<button class="blank">.</button><button data-key="pitchUp">Pitch +</button><button class="blank">.</button>
+<button data-key="rollLeft">Roll −</button><button data-key="center" class="secondary">Center</button><button data-key="rollRight">Roll +</button>
+<button data-key="yawLeft">Yaw −</button><button data-key="pitchDown">Pitch −</button><button data-key="yawRight">Yaw +</button>
+</div>
+<div class="note" style="margin-top:9px">Press and hold a trim button. Desktop keys: W/S pitch, A/D roll, Q/E yaw, R/F throttle.</div>
+</div>
+<div class="section">
+<h2>Six-state telemetry</h2>
+<div class="telemetry">
+<div><span>World position x/y/z</span><strong id="posT">0 / 0 / 500 m</strong></div>
+<div><span>Body velocity u/v/w</span><strong id="velT">100 / 0 / 0 m/s</strong></div>
+<div><span>Euler roll/pitch/yaw</span><strong id="eulerT">0 / 0 / 0°</strong></div>
+<div><span>Body rates p/q/r</span><strong id="rateT">0 / 0 / 0°/s</strong></div>
+<div><span>Throttle</span><strong id="thrT">55%</strong></div>
+<div><span>Simulation time</span><strong id="timeT">0.0 s</strong></div>
+</div>
+</div>
+<div class="note">Toy coefficients only. No targeting, interception, seeker, terminal guidance, payload, or real vehicle calibration is included.</div>
+</aside>
+</div>
+<script>
+(()=>{
+'use strict';
+const $=s=>document.querySelector(s), clamp=(x,a,b)=>Math.max(a,Math.min(b,x)), rad=d=>d*Math.PI/180, deg=r=>r*180/Math.PI;
+const add=(a,b)=>a.map((x,i)=>x+b[i]), sub=(a,b)=>a.map((x,i)=>x-b[i]), mul=(a,s)=>a.map(x=>x*s), dot=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2], cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]], norm=a=>Math.hypot(...a), unit=a=>{let n=norm(a)||1;return mul(a,1/n)};
+const qMul=(a,b)=>[a[0]*b[0]-a[1]*b[1]-a[2]*b[2]-a[3]*b[3],a[0]*b[1]+a[1]*b[0]+a[2]*b[3]-a[3]*b[2],a[0]*b[2]-a[1]*b[3]+a[2]*b[0]+a[3]*b[1],a[0]*b[3]+a[1]*b[2]-a[2]*b[1]+a[3]*b[0]];
+const qNorm=q=>{let n=Math.hypot(...q)||1;return q.map(x=>x/n)}, qConj=q=>[q[0],-q[1],-q[2],-q[3]];
+const rotate=(q,v)=>qMul(qMul(q,[0,...v]),qConj(q)).slice(1), invRotate=(q,v)=>rotate(qConj(q),v);
+const euler=q=>{let[w,x,y,z]=q;return[Math.atan2(2*(w*x+y*z),1-2*(x*x+y*y)),Math.asin(clamp(2*(w*y-z*x),-1,1)),Math.atan2(2*(w*z+x*y),1-2*(y*y+z*z))]};
+const canvas=$('#world'),ctx=canvas.getContext('2d'); let W=0,H=0,DPR=1;
+function resize(){DPR=Math.min(2,devicePixelRatio||1);W=canvas.clientWidth;H=canvas.clientHeight;canvas.width=W*DPR;canvas.height=H*DPR;ctx.setTransform(DPR,0,0,DPR,0,0)} addEventListener('resize',resize);resize();
+let state, running=false, simTime=0, timeScale=1, camera='chase', showTrail=true, trail=[], last=performance.now(), reached=false;
+const keys={pitchUp:0,pitchDown:0,rollLeft:0,rollRight:0,yawLeft:0,yawRight:0,throttleUp:0,throttleDown:0};
+function reset(){state={pos:[0,0,500],vel:[100,0,0],quat:[1,0,0,0],rates:[0,0,0],throttle:.55,trim:[0,0,0]};simTime=0;trail=[];running=false;reached=false;last=performance.now();banner('Paused — choose commands, then start')}
+function banner(t){let b=$('#banner');b.textContent=t;b.style.display='block'}
+function commands(){return{speed:+$('#speedCmd').value,alt:+$('#altCmd').value,range:+$('#rangeCmd').value*1000,auto:$('#auto').checked}}
+function density(z){return 1.225*Math.exp(-Math.max(0,z)/8500)}
+function derivatives(dt){
+ const c=commands(), [roll,pitch,yaw]=euler(state.quat), vw=rotate(state.quat,state.vel), speed=norm(state.vel), rho=density(state.pos[2]), qbar=.5*rho*speed*speed;
+ const altErr=c.alt-state.pos[2], pitchCmd=clamp(.0012*altErr-.018*vw[2],rad(-22),rad(22)), rollCmd=clamp(-.0012*state.pos[1]-.025*vw[1],rad(-28),rad(28));
+ let elevator=0,aileron=0,rudder=0;
+ if(c.auto){elevator=clamp(2.5*(pitchCmd-pitch)-.55*state.rates[1],-1,1);aileron=clamp(2.2*(rollCmd-roll)-.45*state.rates[0],-1,1);rudder=clamp(-1.2*yaw-.5*state.rates[2],-1,1);state.throttle=clamp(state.throttle+(.008*(c.speed-speed))*dt,.05,1)}
+ let pitchTrim=(keys.pitchUp-keys.pitchDown)*.8, rollTrim=(keys.rollRight-keys.rollLeft)*.8, yawTrim=(keys.yawRight-keys.yawLeft)*.8;
+ elevator=clamp(elevator+pitchTrim,-1,1);aileron=clamp(aileron+rollTrim,-1,1);rudder=clamp(rudder+yawTrim,-1,1);
+ state.throttle=clamp(state.throttle+(keys.throttleUp-keys.throttleDown)*.45*dt,0,1);
+ const alpha=Math.atan2(-state.vel[2],Math.max(1,state.vel[0])), beta=Math.atan2(state.vel[1],Math.max(1,state.vel[0]));
+ const drag=mul(unit(state.vel),-qbar*.7*.22), lift=[0,0,qbar*.7*clamp(3.4*alpha,-1.15,1.15)], side=[0,-qbar*.7*clamp(2.2*beta,-.8,.8),0], thrust=[11500*state.throttle,0,0];
+ const force=add(add(drag,lift),add(side,thrust)), gravityBody=invRotate(state.quat,[0,0,-9.80665]), coriolis=cross(state.rates,state.vel);
+ const velDot=sub(add(mul(force,1/260),gravityBody),coriolis);
+ const moments=[460*aileron-220*state.rates[0],760*elevator-360*state.rates[1],510*rudder-250*state.rates[2]], I=[230,520,610];
+ const rateDot=[moments[0]/I[0],moments[1]/I[1],moments[2]/I[2]];
+ const qdot=mul(qMul(state.quat,[0,...state.rates]),.5);
+ state.pos=add(state.pos,mul(vw,dt)); state.vel=add(state.vel,mul(velDot,dt)); state.rates=add(state.rates,mul(rateDot,dt)); state.quat=qNorm(add(state.quat,mul(qdot,dt)));
+ if(state.pos[2]<2){state.pos[2]=2;if(vw[2]<0)state.vel[2]=0}
+ simTime+=dt;
+ if(!trail.length||norm(sub(state.pos,trail[trail.length-1]))>20){trail.push([...state.pos]);if(trail.length>1200)trail.shift()}
+ if(state.pos[0]>=c.range&&!reached){reached=true;running=false;banner('Range command reached — simulation paused')}
+}
+function projectFactory(){
+ const bodyF=unit(rotate(state.quat,[1,0,0])), up=[0,0,1]; let cam,target;
+ if(camera==='top'){cam=add(state.pos,[0,0,2600]);target=state.pos.slice()}
+ else if(camera==='wide'){cam=add(state.pos,[-2200,-1200,900]);target=add(state.pos,mul(bodyF,600))}
+ else{cam=add(add(state.pos,mul(bodyF,-850)),[0,0,280]);target=add(state.pos,mul(bodyF,520))}
+ const f=unit(sub(target,cam)), r=unit(cross(f,up)), u=unit(cross(r,f)), focal=Math.min(W,H)*.85;
+ return p=>{let d=sub(p,cam),z=dot(d,f);if(z<5)return null;return[W/2+focal*dot(d,r)/z,H/2-focal*dot(d,u)/z,z]}
+}
+function line3(a,b,P,style='#ffffff33',width=1){let A=P(a),B=P(b);if(!A||!B)return;ctx.strokeStyle=style;ctx.lineWidth=width;ctx.beginPath();ctx.moveTo(A[0],A[1]);ctx.lineTo(B[0],B[1]);ctx.stroke()}
+function draw(){
+ const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,'#06182b');g.addColorStop(.58,'#1a4868');g.addColorStop(.581,'#1b2b27');g.addColorStop(1,'#07130f');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+ const P=projectFactory(), cx=Math.floor(state.pos[0]/500)*500, cy=Math.floor(state.pos[1]/500)*500;
+ for(let i=-6;i<=10;i++){let x=cx+i*500;line3([x,cy-4000,0],[x,cy+4000,0],P,i===0?'#65d8ff45':'#ffffff16')}
+ for(let j=-8;j<=8;j++){let y=cy+j*500;line3([cx-3500,y,0],[cx+5500,y,0],P,j===0?'#ffd36a3b':'#ffffff16')}
+ if(showTrail&&trail.length>1){ctx.strokeStyle='#65d8ffcc';ctx.lineWidth=2;ctx.beginPath();let begun=false;for(const p of trail){let s=P(p);if(s){if(!begun){ctx.moveTo(s[0],s[1]);begun=true}else ctx.lineTo(s[0],s[1])}}ctx.stroke()}
+ const c=commands(), gateX=c.range;line3([gateX,-1200,0],[gateX,-1200,3000],P,'#ffd36aaa',2);line3([gateX,1200,0],[gateX,1200,3000],P,'#ffd36aaa',2);line3([gateX,-1200,c.alt],[gateX,1200,c.alt],P,'#ffd36acc',3);
+ const O=state.pos, F=add(O,mul(rotate(state.quat,[1,0,0]),130)), R=add(O,mul(rotate(state.quat,[0,1,0]),65)), L=add(O,mul(rotate(state.quat,[0,-1,0]),65)), U=add(O,mul(rotate(state.quat,[0,0,1]),35)), o=P(O),f=P(F),r=P(R),l=P(L),u=P(U);
+ if(o&&f&&r&&l){ctx.fillStyle='#eef7ff';ctx.strokeStyle='#07111f';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(f[0],f[1]);ctx.lineTo(r[0],r[1]);ctx.lineTo(o[0],o[1]);ctx.lineTo(l[0],l[1]);ctx.closePath();ctx.fill();ctx.stroke();if(u)line3(O,U,P,'#ffd36a',3)}
+ ctx.fillStyle='#ffffffaa';ctx.font='12px system-ui';ctx.fillText(camera.toUpperCase()+' CAMERA',14,H-18)
+}
+function updateUI(){
+ const [r,p,y]=euler(state.quat), vw=rotate(state.quat,state.vel), speed=norm(state.vel), km=Math.max(0,state.pos[0]/1000);
+ $('#hudSpeed').textContent=speed.toFixed(0)+' m/s';$('#hudAlt').textContent=state.pos[2].toFixed(0)+' m';$('#hudRange').textContent=km.toFixed(1)+' km';$('#hudAtt').textContent=deg(p).toFixed(0)+'° / '+deg(r).toFixed(0)+'°';
+ $('#posT').textContent=state.pos.map(x=>x.toFixed(0)).join(' / ')+' m';$('#velT').textContent=state.vel.map(x=>x.toFixed(1)).join(' / ')+' m/s';$('#eulerT').textContent=[r,p,y].map(x=>deg(x).toFixed(1)).join(' / ')+'°';$('#rateT').textContent=state.rates.map(x=>deg(x).toFixed(1)).join(' / ')+'°/s';$('#thrT').textContent=(state.throttle*100).toFixed(0)+'%';$('#timeT').textContent=simTime.toFixed(1)+' s';
+}
+function loop(now){let elapsed=Math.min(.05,(now-last)/1000);last=now;if(running){let total=elapsed*timeScale,step=.01;while(total>0){let d=Math.min(step,total);derivatives(d);total-=d}}draw();updateUI();requestAnimationFrame(loop)}
+function bindRange(id,out,fmt){let e=$(id),o=$(out),f=()=>o.value=fmt(+e.value);e.addEventListener('input',f);f()}
+bindRange('#speedCmd','#speedOut',v=>v+' m/s');bindRange('#altCmd','#altOut',v=>v.toLocaleString()+' m');bindRange('#rangeCmd','#rangeOut',v=>v+' km');
+$('#startBtn').onclick=()=>{running=true;reached=false;banner('Running — autopilot tracking commands')};$('#pauseBtn').onclick=()=>{running=false;banner('Paused')};$('#resetBtn').onclick=reset;$('#timeBtn').onclick=e=>{timeScale=timeScale===1?2:timeScale===2?4:1;e.currentTarget.textContent='Time '+timeScale+'×'};
+$('.cam');document.querySelectorAll('.cam').forEach(b=>b.onclick=()=>{camera=b.dataset.cam;document.querySelectorAll('.cam').forEach(x=>x.classList.toggle('active',x===b))});$('#trailBtn').onclick=e=>{showTrail=!showTrail;e.currentTarget.textContent='Trail '+(showTrail?'on':'off');e.currentTarget.classList.toggle('active',showTrail)};
+const keyMap={w:'pitchUp',s:'pitchDown',a:'rollLeft',d:'rollRight',q:'yawLeft',e:'yawRight',r:'throttleUp',f:'throttleDown'};addEventListener('keydown',e=>{let k=keyMap[e.key.toLowerCase()];if(k){keys[k]=1;e.preventDefault()}});addEventListener('keyup',e=>{let k=keyMap[e.key.toLowerCase()];if(k)keys[k]=0});
+document.querySelectorAll('[data-key]').forEach(b=>{let k=b.dataset.key;if(k==='center'){b.onclick=()=>Object.keys(keys).forEach(x=>keys[x]=0);return}const on=e=>{keys[k]=1;e.preventDefault()},off=e=>{keys[k]=0;e.preventDefault()};b.addEventListener('pointerdown',on);b.addEventListener('pointerup',off);b.addEventListener('pointercancel',off);b.addEventListener('pointerleave',off)});
+reset();requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
